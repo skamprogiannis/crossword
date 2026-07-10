@@ -1,54 +1,71 @@
-function parseAndvalidateInput(emptyPuzzle,words){
-    if ((typeof emptyPuzzle !== 'string') || (!Array.isArray(words))){
-        console.log('Error')
-        return
-    }
+function parseAndValidateInput(emptyPuzzle, words) {
+  if (typeof emptyPuzzle !== "string" || !Array.isArray(words)) {
+    return {
+      error: "expected arguments: puzzle === string, words === array",
+    };
+  }
 
-    if (emptyPuzzle.length === 0 || words.length === 0){
-        console.log('Error')
-        return
-    }
+  if (emptyPuzzle.length === 0 || words.length === 0) {
+    return {
+      error: "puzzle and words must not be empty",
+    };
+  }
 
-    const regex = /[^\.\d\n]/
-    if (regex.test(emptyPuzzle)){
-        console.log('Error')
-        return
-    }
+  const invalidPuzzleChars = /[^\.\d\n]/;
+  if (invalidPuzzleChars.test(emptyPuzzle)) {
+    return {
+      error: "puzzle must contain only digits, dots, and newlines",
+    };
+  }
 
-    const seen = new Set(words)
-    if (seen.size !== words.length){
-        console.log('Error')
-        return
-    }
+  const uniqueWords = new Set(words);
+  if (uniqueWords.size !== words.length) {
+    return {
+      error: "words array must not contain duplicates",
+    };
+  }
 
-    const rows = emptyPuzzle.split('\n')
-    const isRectangular = rows.every(row => row.length === rows[0].length);
-    if (!isRectangular) {
-        console.log('Error');
-        return;
-        }
+  const rows = emptyPuzzle.split("\n");
+  const isRectangular = rows.every((row) => row.length === rows[0].length);
+  if (!isRectangular) {
+    return {
+      error: "all puzzle rows must have the same length",
+    };
+  }
 
-    const singleDigits = emptyPuzzle.match((/\d/g));
-    if (!singleDigits) {
-        console.log('Error');
-        return;
-    }
-    const numOfWords = singleDigits.reduce((total, curr) => total + Number(curr), 0);
-    if (numOfWords !== words.length) {
-        console.log('Error');
-        return;
-    } 
+  const startDigits = emptyPuzzle.match(/\d/g);
+  if (!startDigits) {
+    return {
+      error: "puzzle must contain digits marking word starts",
+    };
+  }
 
-    return rows;
+  const expectedWords = startDigits.reduce(
+    (total, current) => total + Number(current),
+    0,
+  );
+  if (expectedWords !== words.length) {
+    return {
+      error: `puzzle expects ${expectedWords} words but received ${words.length}`,
+    };
+  }
+
+  return { rows };
 }
 
 function crosswordSolver(emptyPuzzle, words) {
-    const matrix = parseAndvalidateInput(emptyPuzzle, words)
-    if (!matrix) return;
+  const validation = parseAndValidateInput(emptyPuzzle, words);
+  if (validation.error) {
+    console.log("Error: " + validation.error);
+    return;
+  }
 
-    for (let i = 0; i < matrix.length; i++) {
-        for () {
-            
-        }
+  const matrix = validation.rows;
+  for (let y = 0; y < matrix.length; y++) {
+    const row = matrix[y];
+    for (let x = 0; x < row.length; x++) {
+      // do stuff
     }
+  }
 }
+
