@@ -1,12 +1,4 @@
-function parse(emptyPuzzle,words){
-    
-
-
-
-console.log()
-}
-
-function validateInput(emptyPuzzle,words){
+function parseAndvalidateInput(emptyPuzzle,words){
     if ((typeof emptyPuzzle !== 'string') || (!Array.isArray(words))){
         console.log('Error')
         return
@@ -47,5 +39,16 @@ function validateInput(emptyPuzzle,words){
         return;
     } 
 
+    return rows;
+}
 
-}    
+function crosswordSolver(emptyPuzzle, words) {
+    const matrix = parseAndvalidateInput(emptyPuzzle, words)
+    if (!matrix) return;
+
+    for (let i = 0; i < matrix.length; i++) {
+        for () {
+            
+        }
+    }
+}
