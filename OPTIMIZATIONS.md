@@ -63,46 +63,16 @@ mostly correctness checks because they may finish quickly.
 
 ### Timing Procedure
 
-Create a temporary, uncommitted driver below `crosswordSolver` and replace the
-placeholder `puzzle` and `words` values with one audit case:
+After `placeWord` is implemented, run the committed timer:
 
-```js
-const { performance } = require("node:perf_hooks");
-
-function timeScenario(name, puzzle, words, iterations) {
-  const originalLog = console.log;
-  const durations = [];
-
-  console.log = () => {};
-  try {
-    for (let warmup = 0; warmup < 10; warmup++) {
-      crosswordSolver(puzzle, [...words]);
-    }
-
-    for (let batch = 0; batch < 5; batch++) {
-      const start = performance.now();
-
-      for (let run = 0; run < iterations; run++) {
-        crosswordSolver(puzzle, [...words]);
-      }
-
-      durations.push(performance.now() - start);
-    }
-  } finally {
-    console.log = originalLog;
-  }
-
-  const sorted = [...durations].sort((left, right) => left - right);
-  const median = sorted[Math.floor(sorted.length / 2)];
-
-  console.log({ name, iterations, durations, median });
-}
-
-timeScenario("large", puzzle, words, 100);
+```bash
+node timer.js
 ```
 
-Keep console output disabled while timing so printing does not dominate the
-measurement. Adjust `iterations` until one batch takes roughly 0.5 to 2 seconds.
+`timer.js` starts with the small valid audit puzzle. Replace its `puzzle` and
+`words` constants with one audit case at a time, then adjust `ITERATIONS` if the
+result is too noisy. The timer suppresses crossword output and reports average
+milliseconds per solver call, so printing does not dominate the measurement.
 
 ### Recording Results
 
@@ -111,11 +81,11 @@ For every baseline and optimization, record:
 1. `git rev-parse --short HEAD`.
 2. `node --version`.
 3. Scenario name and iteration count.
-4. All five batch durations and their median.
+4. The average reported by three timer runs.
 5. Whether the normal, unsuppressed run produced the expected output or error.
 
 Retain an optimization only when it preserves all expected results and improves
-the median time by at least 10% on a representative large or ambiguous case.
+the typical timer result by at least 10% on a representative large or ambiguous case.
 Prefer the clearer implementation for smaller gains. Do not use
 `process.memoryUsage().heapUsed` alone as an allocation metric: garbage
 collection timing makes it too variable for this decision.

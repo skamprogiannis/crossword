@@ -310,3 +310,5 @@ function crosswordSolver(emptyPuzzle, words) {
 
   console.log(solvedBoard.map((row) => row.join("")).join("\n"));
 }
+
+module.exports = { crosswordSolver };
