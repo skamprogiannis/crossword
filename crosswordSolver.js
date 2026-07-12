@@ -3,7 +3,7 @@
  *
  * @param {unknown} emptyPuzzle The encoded crossword grid.
  * @param {unknown} words The words that must fill the crossword.
- * @returns {{rows?: string[], error?: string}} Validated rows or an error.
+ * @returns {{value: string[]} | {error: string}} Validated rows or an error.
  */
 function parseAndValidateInput(emptyPuzzle, words) {
   if (typeof emptyPuzzle !== "string" || !Array.isArray(words)) {
@@ -63,7 +63,7 @@ function parseAndValidateInput(emptyPuzzle, words) {
     };
   }
 
-  return { rows };
+  return { value: rows };
 }
 
 /**
@@ -139,7 +139,7 @@ function findUncoveredOpenCell(rows, coveredCells) {
  * Builds word slots and rejects grid cells that cannot form valid words.
  *
  * @param {string[]} rows The immutable encoded puzzle rows.
- * @returns {{slots?: Slot[], error?: string}} The slots or a structural error.
+ * @returns {{value: Slot[]} | {error: string}} The slots or a structural error.
  */
 function createSlots(rows) {
   const slots = [];
@@ -197,7 +197,7 @@ function createSlots(rows) {
     return { error: `open cell at ${position} is not part of a word` };
   }
 
-  return { slots };
+  return { value: slots };
 }
 
 /**
@@ -235,7 +235,7 @@ function placeWord(slot, word, board) {
  * @param {Slot[]} slots The unchanging word positions.
  * @param {string[]} words The input words to place once each.
  * @param {(string | null)[][]} board The initial empty letter board.
- * @returns {(string | null)[][] | {error: string}} The unique solution or error.
+ * @returns {{value: (string | null)[][]} | {error: string}} The solution or error.
  */
 function solve(slots, words, board) {
   const solutions = [];
@@ -299,7 +299,7 @@ function solve(slots, words, board) {
     case 0:
       return { error: "puzzle is not solvable" };
     default:
-      return solutions[0];
+      return { value: solutions[0] };
   }
 }
 
@@ -311,26 +311,39 @@ function solve(slots, words, board) {
  * @returns {void}
  */
 function crosswordSolver(emptyPuzzle, words) {
-  const validation = parseAndValidateInput(emptyPuzzle, words);
-  if (validation.error) {
-    console.log("Error: " + validation.error);
+  const parsedInput = parseAndValidateInput(emptyPuzzle, words);
+  if ("error" in parsedInput) {
+    console.log("Error: " + parsedInput.error);
     return;
   }
 
-  const slotsResult = createSlots(validation.rows);
-  if (slotsResult.error) {
-    console.log("Error: " + slotsResult.error);
+  const rows = parsedInput.value;
+  const slotBuild = createSlots(rows);
+  if ("error" in slotBuild) {
+    console.log("Error: " + slotBuild.error);
     return;
   }
 
-  const board = createBoard(validation.rows);
-  const solvedBoard = solve(slotsResult.slots, words, board);
-  if (solvedBoard.error) {
-    console.log("Error: " + solvedBoard.error);
+  const slots = slotBuild.value;
+  const board = createBoard(rows);
+  const solvedPuzzle = solve(slots, words, board);
+  if ("error" in solvedPuzzle) {
+    console.log("Error: " + solvedPuzzle.error);
     return;
   }
 
+  const solvedBoard = solvedPuzzle.value;
   console.log(solvedBoard.map((row) => row.join("")).join("\n"));
 }
 
-module.exports = { crosswordSolver };
+module.exports = {
+  parseAndValidateInput,
+  getSlotLength,
+  getSlotPosition,
+  findUncoveredOpenCell,
+  createSlots,
+  createBoard,
+  placeWord,
+  solve,
+  crosswordSolver,
+};
