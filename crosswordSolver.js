@@ -118,6 +118,24 @@ function getSlotPosition(slot, offset) {
 }
 
 /**
+ * Finds the first non-blocked cell that is not covered by a word slot.
+ *
+ * @param {string[]} rows The immutable encoded puzzle rows.
+ * @param {Set<string>} coveredCells Coordinates covered by generated slots.
+ * @returns {{x: number, y: number} | null} The uncovered coordinate, or null.
+ */
+function findUncoveredOpenCell(rows, coveredCells) {
+  for (let y = 0; y < rows.length; y++) {
+    for (let x = 0; x < rows[y].length; x++) {
+      if (rows[y][x] !== "." && !coveredCells.has(`${x},${y}`)) {
+        return { x, y };
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Builds word slots and rejects grid cells that cannot form valid words.
  *
  * @param {string[]} rows The immutable encoded puzzle rows.
@@ -173,14 +191,10 @@ function createSlots(rows) {
     }
   }
 
-  for (let y = 0; y < rows.length; y++) {
-    for (let x = 0; x < rows[y].length; x++) {
-      if (rows[y][x] !== "." && !coveredCells.has(`${x},${y}`)) {
-        return {
-          error: `open cell at (${x}, ${y}) is not part of a word`,
-        };
-      }
-    }
+  const uncoveredCell = findUncoveredOpenCell(rows, coveredCells);
+  if (uncoveredCell) {
+    const position = `(${uncoveredCell.x}, ${uncoveredCell.y})`;
+    return { error: `open cell at ${position} is not part of a word` };
   }
 
   return { slots };
@@ -193,9 +207,7 @@ function createSlots(rows) {
  * @returns {(string | null)[][]} A board with dots and empty open cells.
  */
 function createBoard(rows) {
-  return rows.map((row) =>
-    [...row].map((cell) => (cell === "." ? "." : null)),
-  );
+  return rows.map((row) => [...row].map((cell) => (cell === "." ? "." : null)));
 }
 
 function placeWord(slot, word, board) {
@@ -257,7 +269,9 @@ function solve(slots, words, board) {
         continue;
       }
 
-      const nextWords = remainingWords.filter((_, index) => index !== wordIndex);
+      const nextWords = remainingWords.filter(
+        (_, index) => index !== wordIndex,
+      );
       const nextBoard = placeWord(slot, word, currentBoard);
       search(nextSlots, nextWords, nextBoard);
     }
