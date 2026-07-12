@@ -235,7 +235,7 @@ function placeWord(slot, word, board) {
  * @param {Slot[]} slots The unchanging word positions.
  * @param {string[]} words The input words to place once each.
  * @param {(string | null)[][]} board The initial empty letter board.
- * @returns {(string | null)[][] | null} The unique solution, or null.
+ * @returns {(string | null)[][] | {error: string}} The unique solution or error.
  */
 function solve(slots, words, board) {
   const solutions = [];
@@ -293,7 +293,14 @@ function solve(slots, words, board) {
   }
 
   search(slots, words, board);
-  return solutions.length === 1 ? solutions[0] : null;
+  switch (solutions.length) {
+    case 2:
+      return { error: "puzzle has more than 1 solution" };
+    case 0:
+      return { error: "puzzle is not solvable" };
+    default:
+      return solutions[0];
+  }
 }
 
 /**
@@ -318,8 +325,8 @@ function crosswordSolver(emptyPuzzle, words) {
 
   const board = createBoard(validation.rows);
   const solvedBoard = solve(slotsResult.slots, words, board);
-  if (!solvedBoard) {
-    console.log("Error: no unique solution found");
+  if (solvedBoard.error) {
+    console.log("Error: " + solvedBoard.error);
     return;
   }
 
