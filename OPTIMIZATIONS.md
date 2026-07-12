@@ -4,10 +4,18 @@ The current solver favors clarity while the backtracking algorithm is being
 completed. Consider these changes only after `placeWord` has a tested
 implementation and the baseline behavior is stable.
 
+## Choose the Most Constrained Slot First
+
+**Priority: High.** Before each recursive step, choose the unfilled slot with
+the fewest compatible unused words. This preserves correctness but can reject
+impossible branches much earlier than always using the next slot in reading
+order. Measure it on the large and ambiguous scenarios before keeping it.
+
 ## Mutate One Shared Board and Undo Changes
 
-`placeWord` currently has a TODO. Its first implementation can return a copied
-board for clarity. Later, avoid cloning every board row for each candidate:
+**Priority: Medium.** `placeWord` currently has a TODO. Its first
+implementation can return a copied board for clarity. Later, avoid cloning
+every board row for each candidate:
 
 1. Write the candidate letters directly into one shared board.
 2. Record only positions that were `null` before this placement.
@@ -21,31 +29,93 @@ independent.
 
 ## Track Used Word Indexes
 
-The solver currently creates `nextWords` with `filter` for every candidate.
-Keep the original `words` array and mark chosen indexes in a `Set` or boolean
-array instead. Add an index before recursion and remove it after recursion.
+**Priority: Low.** The solver currently creates `nextWords` with `filter` for
+every candidate. Keep the original `words` array and mark chosen indexes in a
+`Set` or boolean array instead. Add an index before recursion and remove it
+after recursion. This removes small allocations but adds mutable state.
 
 ## Advance Through Slots by Index
 
-The expression `[slot, ...nextSlots]` creates a new slots array at every level.
-Pass a `slotIndex` into the recursive function and read `slots[slotIndex]`.
-This retains the fixed slots array for the entire search.
+**Priority: Low.** The expression `[slot, ...nextSlots]` creates a new slots
+array at every level. Pass a `slotIndex` into the recursive function and read
+`slots[slotIndex]`. This is a minor allocation reduction and pairs naturally
+with used word indexes.
 
-## Choose the Most Constrained Slot First
+## Measurements
 
-Before each recursive step, choose the unfilled slot with the fewest compatible
-unused words. This preserves correctness but usually rejects impossible branches
-earlier than always using the next slot in reading order.
+Measure one change at a time. Compare it with the unmodified baseline using the
+same Node version, machine state, and inputs.
 
-## Stop Tracking Full Solution Arrays
+### Inputs
 
-The solver only needs to distinguish zero, one, and more than one solution.
-Store the first solved board and a numeric solution count, stopping as soon as
-the second solution is found. This avoids retaining a second board solely to
-detect ambiguity.
+Use the published [crossword audit cases](https://public.01-edu.org/subjects/crossword/audit/):
 
-## Measure Before Optimizing
+1. The small valid puzzle.
+2. The large valid puzzle with words in its original order.
+3. The same large valid puzzle with its words reversed.
+4. The ambiguous `abba` / `assa` puzzle.
+5. A no-solution puzzle such as the `aaab` / `aaac` / `aaad` / `aaae` case.
 
-Use the published audit puzzles and a few deliberately ambiguous puzzles as a
-baseline. Keep each optimization only if it improves runtime without making the
-backtracking and undo logic harder to verify.
+Run every case normally before and after an optimization to confirm that valid
+cases print their expected boards and invalid or ambiguous cases print an error.
+The large valid inputs are the primary timing scenarios; invalid inputs are
+mostly correctness checks because they may finish quickly.
+
+### Timing Procedure
+
+Create a temporary, uncommitted driver below `crosswordSolver` and replace the
+placeholder `puzzle` and `words` values with one audit case:
+
+```js
+const { performance } = require("node:perf_hooks");
+
+function timeScenario(name, puzzle, words, iterations) {
+  const originalLog = console.log;
+  const durations = [];
+
+  console.log = () => {};
+  try {
+    for (let warmup = 0; warmup < 10; warmup++) {
+      crosswordSolver(puzzle, [...words]);
+    }
+
+    for (let batch = 0; batch < 5; batch++) {
+      const start = performance.now();
+
+      for (let run = 0; run < iterations; run++) {
+        crosswordSolver(puzzle, [...words]);
+      }
+
+      durations.push(performance.now() - start);
+    }
+  } finally {
+    console.log = originalLog;
+  }
+
+  const sorted = [...durations].sort((left, right) => left - right);
+  const median = sorted[Math.floor(sorted.length / 2)];
+
+  console.log({ name, iterations, durations, median });
+}
+
+timeScenario("large", puzzle, words, 100);
+```
+
+Keep console output disabled while timing so printing does not dominate the
+measurement. Adjust `iterations` until one batch takes roughly 0.5 to 2 seconds.
+
+### Recording Results
+
+For every baseline and optimization, record:
+
+1. `git rev-parse --short HEAD`.
+2. `node --version`.
+3. Scenario name and iteration count.
+4. All five batch durations and their median.
+5. Whether the normal, unsuppressed run produced the expected output or error.
+
+Retain an optimization only when it preserves all expected results and improves
+the median time by at least 10% on a representative large or ambiguous case.
+Prefer the clearer implementation for smaller gains. Do not use
+`process.memoryUsage().heapUsed` alone as an allocation metric: garbage
+collection timing makes it too variable for this decision.
