@@ -1,8 +1,7 @@
 # Future Solver Optimizations
 
-The current solver favors clarity while the backtracking algorithm is being
-completed. Consider these changes only after `placeWord` has a tested
-implementation and the baseline behavior is stable.
+The current solver favors clarity over performance. Consider these changes only
+after the baseline behavior and tests are stable.
 
 ## Choose the Most Constrained Slot First
 
@@ -13,9 +12,8 @@ order. Measure it on the large and ambiguous scenarios before keeping it.
 
 ## Mutate One Shared Board and Undo Changes
 
-**Priority: Medium.** `placeWord` currently has a TODO. Its first
-implementation can return a copied board for clarity. Later, avoid cloning
-every board row for each candidate:
+**Priority: Medium.** `placeWord` currently returns a copied board for each
+candidate. Later, avoid cloning every board row for each candidate:
 
 1. Write the candidate letters directly into one shared board.
 2. Record only positions that were `null` before this placement.
@@ -56,14 +54,15 @@ Use the published [crossword audit cases](https://public.01-edu.org/subjects/cro
 4. The ambiguous `abba` / `assa` puzzle.
 5. A no-solution puzzle such as the `aaab` / `aaac` / `aaad` / `aaae` case.
 
-Run every case normally before and after an optimization to confirm that valid
-cases print their expected boards and invalid or ambiguous cases print an error.
-The large valid inputs are the primary timing scenarios; invalid inputs are
-mostly correctness checks because they may finish quickly.
+Run `node --test test/crosswordSolver.test.js` before and after every
+optimization. Also run every audit case normally to confirm that valid cases
+print their expected boards and invalid or ambiguous cases print an error. The
+large valid inputs are the primary timing scenarios; invalid inputs are mostly
+correctness checks because they may finish quickly.
 
 ### Timing Procedure
 
-After `placeWord` is implemented, run the committed timer:
+Run the committed timer:
 
 ```bash
 node timer.js
@@ -85,7 +84,7 @@ For every baseline and optimization, record:
 5. Whether the normal, unsuppressed run produced the expected output or error.
 
 Retain an optimization only when it preserves all expected results and improves
-the typical timer result by at least 10% on a representative large or ambiguous case.
-Prefer the clearer implementation for smaller gains. Do not use
+the typical timer result by at least 10% on a representative large or ambiguous
+case. Prefer the clearer implementation for smaller gains. Do not use
 `process.memoryUsage().heapUsed` alone as an allocation metric: garbage
 collection timing makes it too variable for this decision.
