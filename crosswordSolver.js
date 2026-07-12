@@ -210,8 +210,23 @@ function createBoard(rows) {
   return rows.map((row) => [...row].map((cell) => (cell === "." ? "." : null)));
 }
 
+/**
+ * Returns a copy of the board with `word` written into `slot`.
+ *
+ * @param {Slot} slot The slot to fill.
+ * @param {string} word The word to place.
+ * @param {(string | null)[][]} board The current board.
+ * @returns {(string | null)[][]} A new board containing the placed word.
+ */
 function placeWord(slot, word, board) {
-  // TODO: return a copied board with word written into slot.
+  const nextBoard = board.map((row) => [...row]);
+
+  for (let wordIndex = 0; wordIndex < word.length; wordIndex++) {
+    const { x, y } = getSlotPosition(slot, wordIndex);
+    nextBoard[y][x] = word[wordIndex];
+  }
+
+  return nextBoard;
 }
 
 /**
