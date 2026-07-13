@@ -211,6 +211,34 @@ function createBoard(rows) {
 }
 
 /**
+ * Returns whether a word has the slot's length and matches existing letters.
+ *
+ * @param {Slot} slot The slot to check.
+ * @param {string} word The word to test.
+ * @param {(string | null)[][]} board The current board.
+ * @returns {boolean} Whether the word can be placed without a conflict.
+ */
+function canPlaceWord(slot, word, board) {
+  if (word.length !== slot.length) {
+    return false;
+  }
+
+  for (let offset = 0; offset < word.length; offset++) {
+    const { x, y } = getSlotPosition(slot, offset);
+    const currentCell = board[y][x];
+
+    if (
+      currentCell === "." ||
+      (currentCell !== null && currentCell !== word[offset])
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Returns a copy of the board with `word` written into `slot`.
  *
  * @param {Slot} slot The slot to fill.
@@ -240,14 +268,7 @@ function placeWord(slot, word, board) {
 function solve(slots, words, board) {
   const solutions = [];
 
-  /**
-   * Explores every compatible remaining word for the next slot.
-   *
-   * @param {Slot[]} remainingSlots Slots that still require a word.
-   * @param {string[]} remainingWords Words that have not been placed.
-   * @param {(string | null)[][]} currentBoard The board for this branch.
-   * @returns {void}
-   */
+  // Try every unused compatible word in the next unfilled slot.
   function search(remainingSlots, remainingWords, currentBoard) {
     if (solutions.length > 1) {
       return;
@@ -262,25 +283,8 @@ function solve(slots, words, board) {
 
     for (let wordIndex = 0; wordIndex < remainingWords.length; wordIndex++) {
       const word = remainingWords[wordIndex];
-      if (word.length !== slot.length) {
-        continue;
-      }
 
-      let hasCompatibleCrossings = true;
-      for (let offset = 0; offset < word.length; offset++) {
-        const { x, y } = getSlotPosition(slot, offset);
-        const currentCell = currentBoard[y][x];
-
-        if (
-          currentCell === "." ||
-          (currentCell !== null && currentCell !== word[offset])
-        ) {
-          hasCompatibleCrossings = false;
-          break;
-        }
-      }
-
-      if (!hasCompatibleCrossings) {
+      if (!canPlaceWord(slot, word, currentBoard)) {
         continue;
       }
 
