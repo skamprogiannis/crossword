@@ -347,6 +347,7 @@ module.exports = {
   findUncoveredOpenCell,
   createSlots,
   createBoard,
+  canPlaceWord,
   placeWord,
   solve,
   crosswordSolver,

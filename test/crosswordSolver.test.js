@@ -7,6 +7,7 @@ const {
   findUncoveredOpenCell,
   createSlots,
   createBoard,
+  canPlaceWord,
   placeWord,
   solve,
   crosswordSolver,
@@ -14,18 +15,25 @@ const {
 
 const smallPuzzle = "2001\n0..0\n1000\n0..0";
 const smallWords = ["casa", "alan", "ciao", "anta"];
+const smallRows = ["2001", "0..0", "1000", "0..0"];
+const smallSlots = [
+  { x: 0, y: 0, direction: "across", length: 4 },
+  { x: 0, y: 0, direction: "down", length: 4 },
+  { x: 3, y: 0, direction: "down", length: 4 },
+  { x: 0, y: 2, direction: "across", length: 4 },
+];
+const emptySmallBoard = [
+  [null, null, null, null],
+  [null, ".", ".", null],
+  [null, null, null, null],
+  [null, ".", ".", null],
+];
 const smallBoard = [
   ["c", "a", "s", "a"],
   ["i", ".", ".", "l"],
   ["a", "n", "t", "a"],
   ["o", ".", ".", "n"],
 ];
-
-function getValidRows() {
-  const parsedInput = parseAndValidateInput(smallPuzzle, smallWords);
-  assert.ok("value" in parsedInput);
-  return parsedInput.value;
-}
 
 function captureOutput(callback) {
   const output = [];
@@ -88,14 +96,9 @@ test("findUncoveredOpenCell finds the first uncovered cell", () => {
 });
 
 test("createSlots builds the expected word positions", () => {
-  const slotBuild = createSlots(getValidRows());
+  const slotBuild = createSlots(smallRows);
   assert.ok("value" in slotBuild);
-  assert.deepEqual(slotBuild.value, [
-    { x: 0, y: 0, direction: "across", length: 4 },
-    { x: 0, y: 0, direction: "down", length: 4 },
-    { x: 3, y: 0, direction: "down", length: 4 },
-    { x: 0, y: 2, direction: "across", length: 4 },
-  ]);
+  assert.deepEqual(slotBuild.value, smallSlots);
 });
 
 test("createSlots rejects invalid puzzle geometry", () => {
@@ -112,6 +115,15 @@ test("createBoard converts digits to empty cells and preserves blocks", () => {
     [null, "."],
     [".", null],
   ]);
+});
+
+test("canPlaceWord checks length, blocks, and crossing letters", () => {
+  const slot = { x: 0, y: 0, direction: "across", length: 2 };
+
+  assert.equal(canPlaceWord(slot, "ab", [[null, "b"]]), true);
+  assert.equal(canPlaceWord(slot, "abc", [[null, null]]), false);
+  assert.equal(canPlaceWord(slot, "ac", [[null, "b"]]), false);
+  assert.equal(canPlaceWord(slot, "ab", [[null, "."]]), false);
 });
 
 test("placeWord copies the board for across and down slots", () => {
@@ -138,11 +150,7 @@ test("placeWord copies the board for across and down slots", () => {
     [null, "."],
   ];
   assert.deepEqual(
-    placeWord(
-      { x: 0, y: 0, direction: "down", length: 2 },
-      "ab",
-      downBoard,
-    ),
+    placeWord({ x: 0, y: 0, direction: "down", length: 2 }, "ab", downBoard),
     [
       ["a", "."],
       ["b", "."],
@@ -151,32 +159,31 @@ test("placeWord copies the board for across and down slots", () => {
 });
 
 test("solve returns the unique board or a detailed error", () => {
-  const rows = getValidRows();
-  const slotBuild = createSlots(rows);
-  assert.ok("value" in slotBuild);
-
-  assert.deepEqual(solve(slotBuild.value, smallWords, createBoard(rows)), {
+  assert.deepEqual(solve(smallSlots, smallWords, emptySmallBoard), {
     value: smallBoard,
   });
   assert.deepEqual(
-    solve(slotBuild.value, ["aaab", "aaac", "aaad", "aaae"], createBoard(rows)),
+    solve(smallSlots, ["aaab", "aaac", "aaad", "aaae"], emptySmallBoard),
     { error: "puzzle is not solvable" },
   );
 
-  const ambiguousRows = ["2000", "0...", "0...", "0..."];
-  const ambiguousSlots = createSlots(ambiguousRows);
-  assert.ok("value" in ambiguousSlots);
+  const ambiguousSlots = [
+    { x: 0, y: 0, direction: "across", length: 4 },
+    { x: 0, y: 0, direction: "down", length: 4 },
+  ];
+  const emptyAmbiguousBoard = [
+    [null, null, null, null],
+    [null, ".", ".", "."],
+    [null, ".", ".", "."],
+    [null, ".", ".", "."],
+  ];
   assert.deepEqual(
-    solve(
-      ambiguousSlots.value,
-      ["abba", "assa"],
-      createBoard(ambiguousRows),
-    ),
+    solve(ambiguousSlots, ["abba", "assa"], emptyAmbiguousBoard),
     { error: "puzzle has more than 1 solution" },
   );
 });
 
-test("crosswordSolver prints solved boards and errors", () => {
+test("crosswordSolver integrates solving and printing", () => {
   assert.equal(
     captureOutput(() => crosswordSolver(smallPuzzle, smallWords)),
     "casa\ni..l\nanta\no..n",
