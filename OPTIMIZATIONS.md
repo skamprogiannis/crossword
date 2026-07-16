@@ -1,90 +1,63 @@
-# Future Solver Optimizations
+# Solver Optimization Results
 
-The current solver favors clarity over performance. Consider these changes only
-after the baseline behavior and tests are stable.
+The four proposed optimizations were tested independently on 2026-07-16. Only
+shared-board mutation met the retention rule: preserve every expected result,
+improve a representative large case by at least 10%, and avoid a regression
+greater than 10% on another large case.
 
 ## Choose the Most Constrained Slot First
 
-**Priority: High.** Before each recursive step, choose the unfilled slot with
-the fewest compatible unused words. This preserves correctness but can reject
-impossible branches much earlier than always using the next slot in reading
-order. Measure it on the large and ambiguous scenarios before keeping it.
+**Priority: High. Status: Rejected.** The attempted selector counted compatible
+unused words for every remaining slot and chose the first slot with the lowest
+count. It improved the food puzzle by 11.1%, but slowed the reversed beach case
+by 16.1%, so it failed the regression limit.
 
 ## Mutate One Shared Board and Undo Changes
 
-**Priority: Medium.** `placeWord` currently returns a copied board for each
-candidate. Later, avoid cloning every board row for each candidate:
+**Priority: Medium. Status: Retained in `6d56690`.** `placeWord` now writes
+letters directly into the board and returns only coordinates that were `null`
+before placement. `undoWordPlacement` restores those coordinates after each
+recursive call. Existing crossing letters are never recorded or erased.
 
-1. Write the candidate letters directly into one shared board.
-2. Record only positions that were `null` before this placement.
-3. Recurse with the same board.
-4. Set only those recorded positions back to `null` when backtracking.
-
-Do not erase letters that were already present: they belong to crossing words
-placed earlier in the search. Keep the board local to `solve` rather than using
-a module-global variable, so repeated calls to `crosswordSolver` remain
-independent.
+The board remains local to `solve`, and a completed board is copied only when a
+solution is recorded. This improved all three large scenarios by 15.5% to
+16.8% relative to the baseline.
 
 ## Track Used Word Indexes
 
-**Priority: Low.** The solver currently creates `nextWords` with `filter` for
-every candidate. Keep the original `words` array and mark chosen indexes in a
-`Set` or boolean array instead. Add an index before recursion and remove it
-after recursion. This removes small allocations but adds mutable state.
+**Priority: Low. Status: Rejected.** A boolean array replaced each recursive
+`remainingWords.filter` allocation. It improved the retained shared-board stage
+by 5.4% to 7.1%, which was below the 10% retention threshold.
 
 ## Advance Through Slots by Index
 
-**Priority: Low.** The expression `[slot, ...nextSlots]` creates a new slots
-array at every level. Pass a `slotIndex` into the recursive function and read
-`slots[slotIndex]`. This is a minor allocation reduction and pairs naturally
-with used word indexes.
+**Priority: Low. Status: Rejected.** Passing a numeric slot index removed the
+`[slot, ...nextSlots]` allocation, but slowed all three measured scenarios by
+2.8% to 6.9% relative to the retained shared-board stage.
 
 ## Measurements
 
-Measure one change at a time. Compare it with the unmodified baseline using the
-same Node version, machine state, and inputs.
+Measurements used Node.js `v24.18.0` on the same machine and branch worktree.
+A temporary uncommitted harness suppressed solver output, performed 20 warmup
+calls per scenario, and ran three timed batches. Beach and reversed beach used
+12,000 calls per batch; food used 15,000. Values below are milliseconds per
+solver call, with the median shown after the three samples.
 
-### Inputs
+| Stage | Beach | Reversed beach | Food | Decision |
+| --- | --- | --- | --- | --- |
+| Baseline `fdd210d` | 0.046830 / 0.043410 / 0.042591 (0.043410) | 0.042767 / 0.043072 / 0.042739 (0.042767) | 0.034937 / 0.034125 / 0.034023 (0.034125) | Baseline |
+| Constrained slot | 0.050314 / 0.046753 / 0.046016 (0.046753) | 0.050736 / 0.049642 / 0.049189 (0.049642) | 0.030623 / 0.030237 / 0.030341 (0.030341) | Rejected |
+| Shared board `6d56690` | 0.040366 / 0.036101 / 0.035979 (0.036101) | 0.036114 / 0.035911 / 0.035529 (0.035911) | 0.029477 / 0.028816 / 0.028655 (0.028816) | Retained |
+| Used word indexes | 0.038262 / 0.034164 / 0.033830 (0.034164) | 0.033733 / 0.033804 / 0.033832 (0.033804) | 0.026776 / 0.026768 / 0.026538 (0.026768) | Rejected |
+| Slot index | 0.044095 / 0.038600 / 0.037124 (0.038600) | 0.036911 / 0.037538 / 0.036910 (0.036911) | 0.030953 / 0.029481 / 0.029760 (0.029760) | Rejected |
 
-Use the published [crossword audit cases](https://public.01-edu.org/subjects/crossword/audit/):
-
-1. The small valid puzzle.
-2. The large valid puzzle with words in its original order.
-3. The same large valid puzzle with its words reversed.
-4. The ambiguous `abba` / `assa` puzzle.
-5. A no-solution puzzle such as the `aaab` / `aaac` / `aaad` / `aaae` case.
-
-Run `node --test test/crosswordSolver.test.js` before and after every
-optimization. Also run every audit case normally to confirm that valid cases
-print their expected boards and invalid or ambiguous cases print an error. The
-large valid inputs are the primary timing scenarios; invalid inputs are mostly
-correctness checks because they may finish quickly.
-
-### Timing Procedure
-
-Run the committed timer:
+The official small, beach, reversed-beach, food, malformed, ambiguous, and
+no-solution audit cases passed before and after the retained change. Run them
+with:
 
 ```bash
-node timer.js
+node --test test/crosswordSolver.test.js
 ```
 
-`timer.js` starts with the small valid audit puzzle. Replace its `puzzle` and
-`words` constants with one audit case at a time, then adjust `ITERATIONS` if the
-result is too noisy. The timer suppresses crossword output and reports average
-milliseconds per solver call, so printing does not dominate the measurement.
-
-### Recording Results
-
-For every baseline and optimization, record:
-
-1. `git rev-parse --short HEAD`.
-2. `node --version`.
-3. Scenario name and iteration count.
-4. The average reported by three timer runs.
-5. Whether the normal, unsuppressed run produced the expected output or error.
-
-Retain an optimization only when it preserves all expected results and improves
-the typical timer result by at least 10% on a representative large or ambiguous
-case. Prefer the clearer implementation for smaller gains. Do not use
-`process.memoryUsage().heapUsed` alone as an allocation metric: garbage
-collection timing makes it too variable for this decision.
+Do not treat `process.memoryUsage().heapUsed` alone as an allocation benchmark;
+garbage collection timing makes it too variable for this decision.
