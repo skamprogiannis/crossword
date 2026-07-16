@@ -34,6 +34,88 @@ const smallBoard = [
   ["a", "n", "t", "a"],
   ["o", ".", ".", "n"],
 ];
+const beachPuzzle = [
+  "...1...........",
+  "..1000001000...",
+  "...0....0......",
+  ".1......0...1..",
+  ".0....100000000",
+  "100000..0...0..",
+  ".0.....1001000.",
+  ".0.1....0.0....",
+  ".10000000.0....",
+  ".0.0......0....",
+  ".0.0.....100...",
+  "...0......0....",
+  "..........0....",
+].join("\n");
+const beachWords = [
+  "sun",
+  "sunglasses",
+  "suncream",
+  "swimming",
+  "bikini",
+  "beach",
+  "icecream",
+  "tan",
+  "deckchair",
+  "sand",
+  "seaside",
+  "sandals",
+];
+const beachSolution = [
+  "...s...........",
+  "..sunglasses...",
+  "...n....u......",
+  ".s......n...s..",
+  ".w....deckchair",
+  "bikini..r...n..",
+  ".m.....seaside.",
+  ".m.b....a.a....",
+  ".icecream.n....",
+  ".n.a......d....",
+  ".g.c.....tan...",
+  "...h......l....",
+  "..........s....",
+].join("\n");
+const foodPuzzle = [
+  "..1.1..1...",
+  "10000..1000",
+  "..0.0..0...",
+  "..1000000..",
+  "..0.0..0...",
+  "1000..10000",
+  "..0.1..0...",
+  "....0..0...",
+  "..100000...",
+  "....0..0...",
+  "....0......",
+].join("\n");
+const foodWords = [
+  "popcorn",
+  "fruit",
+  "flour",
+  "chicken",
+  "eggs",
+  "vegetables",
+  "pasta",
+  "pork",
+  "steak",
+  "cheese",
+];
+const foodSolution = [
+  "..p.f..v...",
+  "flour..eggs",
+  "..p.u..g...",
+  "..chicken..",
+  "..o.t..t...",
+  "pork..pasta",
+  "..n.s..b...",
+  "....t..l...",
+  "..cheese...",
+  "....a..s...",
+  "....k......",
+].join("\n");
 
 function captureOutput(callback) {
   const output = [];
@@ -192,4 +274,36 @@ test("crosswordSolver integrates solving and printing", () => {
     captureOutput(() => crosswordSolver(smallPuzzle, ["casa", "casa"])),
     "Error: words array must not contain duplicates",
   );
+});
+
+test("crosswordSolver solves the official large audit puzzles", () => {
+  assert.equal(
+    captureOutput(() => crosswordSolver(beachPuzzle, beachWords)),
+    beachSolution,
+  );
+  assert.equal(
+    captureOutput(() => crosswordSolver(beachPuzzle, [...beachWords].reverse())),
+    beachSolution,
+  );
+  assert.equal(
+    captureOutput(() => crosswordSolver(foodPuzzle, foodWords)),
+    foodSolution,
+  );
+});
+
+test("crosswordSolver rejects the official invalid audit cases", () => {
+  const invalidInputs = [
+    ["2001\n0..0\n2000\n0..0", smallWords],
+    ["0001\n0..0\n3000\n0..0", smallWords],
+    [smallPuzzle, ["casa", "casa", "ciao", "anta"]],
+    ["", smallWords],
+    [123, smallWords],
+    ["", 123],
+    ["2000\n0...\n0...\n0...", ["abba", "assa"]],
+    [smallPuzzle, ["aaab", "aaac", "aaad", "aaae"]],
+  ];
+
+  for (const [puzzle, words] of invalidInputs) {
+    assert.match(captureOutput(() => crosswordSolver(puzzle, words)), /^Error:/);
+  }
 });
