@@ -51,7 +51,7 @@ function captureOutput(callback) {
 
 test("parseAndValidateInput returns rows for valid input", () => {
   assert.deepEqual(parseAndValidateInput(smallPuzzle, smallWords), {
-    value: ["2001", "0..0", "1000", "0..0"],
+    rows: ["2001", "0..0", "1000", "0..0"],
   });
 });
 
@@ -97,8 +97,8 @@ test("findUncoveredOpenCell finds the first uncovered cell", () => {
 
 test("createSlots builds the expected word positions", () => {
   const slotBuild = createSlots(smallRows);
-  assert.ok("value" in slotBuild);
-  assert.deepEqual(slotBuild.value, smallSlots);
+  assert.ok("slots" in slotBuild);
+  assert.deepEqual(slotBuild.slots, smallSlots);
 });
 
 test("createSlots rejects invalid puzzle geometry", () => {
@@ -160,7 +160,7 @@ test("placeWord copies the board for across and down slots", () => {
 
 test("solve returns the unique board or a detailed error", () => {
   assert.deepEqual(solve(smallSlots, smallWords, emptySmallBoard), {
-    value: smallBoard,
+    solution: smallBoard,
   });
   assert.deepEqual(
     solve(smallSlots, ["aaab", "aaac", "aaad", "aaae"], emptySmallBoard),

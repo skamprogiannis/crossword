@@ -3,7 +3,7 @@
  *
  * @param {unknown} emptyPuzzle The encoded crossword grid.
  * @param {unknown} words The words that must fill the crossword.
- * @returns {{value: string[]} | {error: string}} Validated rows or an error.
+ * @returns {{rows: string[]} | {error: string}} Validated rows or an error.
  */
 function parseAndValidateInput(emptyPuzzle, words) {
   if (typeof emptyPuzzle !== "string" || !Array.isArray(words)) {
@@ -63,7 +63,7 @@ function parseAndValidateInput(emptyPuzzle, words) {
     };
   }
 
-  return { value: rows };
+  return { rows };
 }
 
 /**
@@ -139,7 +139,7 @@ function findUncoveredOpenCell(rows, coveredCells) {
  * Builds word slots and rejects grid cells that cannot form valid words.
  *
  * @param {string[]} rows The immutable encoded puzzle rows.
- * @returns {{value: Slot[]} | {error: string}} The slots or a structural error.
+ * @returns {{slots: Slot[]} | {error: string}} The slots or a structural error.
  */
 function createSlots(rows) {
   const slots = [];
@@ -197,7 +197,7 @@ function createSlots(rows) {
     return { error: `open cell at ${position} is not part of a word` };
   }
 
-  return { value: slots };
+  return { slots };
 }
 
 /**
@@ -263,7 +263,7 @@ function placeWord(slot, word, board) {
  * @param {Slot[]} slots The unchanging word positions.
  * @param {string[]} words The input words to place once each.
  * @param {(string | null)[][]} board The initial empty letter board.
- * @returns {{value: (string | null)[][]} | {error: string}} The solution or error.
+ * @returns {{solution: (string | null)[][]} | {error: string}} The solution or error.
  */
 function solve(slots, words, board) {
   const solutions = [];
@@ -303,7 +303,7 @@ function solve(slots, words, board) {
     case 0:
       return { error: "puzzle is not solvable" };
     default:
-      return { value: solutions[0] };
+      return { solution: solutions[0] };
   }
 }
 
@@ -321,14 +321,14 @@ function crosswordSolver(emptyPuzzle, words) {
     return;
   }
 
-  const rows = parsedInput.value;
+  const rows = parsedInput.rows;
   const slotBuild = createSlots(rows);
   if ("error" in slotBuild) {
     console.log("Error: " + slotBuild.error);
     return;
   }
 
-  const slots = slotBuild.value;
+  const slots = slotBuild.slots;
   const board = createBoard(rows);
   const solvedPuzzle = solve(slots, words, board);
   if ("error" in solvedPuzzle) {
@@ -336,7 +336,7 @@ function crosswordSolver(emptyPuzzle, words) {
     return;
   }
 
-  const solvedBoard = solvedPuzzle.value;
+  const solvedBoard = solvedPuzzle.solution;
   console.log(solvedBoard.map((row) => row.join("")).join("\n"));
 }
 
