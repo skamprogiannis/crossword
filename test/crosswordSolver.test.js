@@ -9,6 +9,7 @@ const {
   createBoard,
   canPlaceWord,
   placeWord,
+  undoWordPlacement,
   solve,
   crosswordSolver,
 } = require("../crosswordSolver");
@@ -208,7 +209,7 @@ test("canPlaceWord checks length, blocks, and crossing letters", () => {
   assert.equal(canPlaceWord(slot, "ab", [[null, "."]]), false);
 });
 
-test("placeWord copies the board for across and down slots", () => {
+test("placeWord records mutable placements for across and down slots", () => {
   const acrossBoard = [
     [null, null],
     [null, "."],
@@ -219,25 +220,38 @@ test("placeWord copies the board for across and down slots", () => {
     acrossBoard,
   );
   assert.deepEqual(placedAcross, [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+  ]);
+  assert.deepEqual(acrossBoard, [
     ["a", "b"],
     [null, "."],
   ]);
+  undoWordPlacement(acrossBoard, placedAcross);
   assert.deepEqual(acrossBoard, [
     [null, null],
     [null, "."],
   ]);
 
   const downBoard = [
-    [null, "."],
+    ["a", "."],
     [null, "."],
   ];
-  assert.deepEqual(
-    placeWord({ x: 0, y: 0, direction: "down", length: 2 }, "ab", downBoard),
-    [
-      ["a", "."],
-      ["b", "."],
-    ],
+  const placedDown = placeWord(
+    { x: 0, y: 0, direction: "down", length: 2 },
+    "ab",
+    downBoard,
   );
+  assert.deepEqual(placedDown, [{ x: 0, y: 1 }]);
+  assert.deepEqual(downBoard, [
+    ["a", "."],
+    ["b", "."],
+  ]);
+  undoWordPlacement(downBoard, placedDown);
+  assert.deepEqual(downBoard, [
+    ["a", "."],
+    [null, "."],
+  ]);
 });
 
 test("solve returns the unique board or a detailed error", () => {

@@ -201,7 +201,7 @@ function createSlots(rows) {
 }
 
 /**
- * Creates the mutable letter board used by each search branch.
+ * Creates the mutable letter board shared throughout the search.
  *
  * @param {string[]} rows The immutable encoded puzzle rows.
  * @returns {(string | null)[][]} A board with dots and empty open cells.
@@ -239,22 +239,38 @@ function canPlaceWord(slot, word, board) {
 }
 
 /**
- * Returns a copy of the board with `word` written into `slot`.
+ * Writes a word into the board and records the newly filled cells.
  *
  * @param {Slot} slot The slot to fill.
  * @param {string} word The word to place.
  * @param {(string | null)[][]} board The current board.
- * @returns {(string | null)[][]} A new board containing the placed word.
+ * @returns {{x: number, y: number}[]} The cells changed from null to a letter.
  */
 function placeWord(slot, word, board) {
-  const nextBoard = board.map((row) => [...row]);
+  const placedCells = [];
 
   for (let wordIndex = 0; wordIndex < word.length; wordIndex++) {
     const { x, y } = getSlotPosition(slot, wordIndex);
-    nextBoard[y][x] = word[wordIndex];
+    if (board[y][x] === null) {
+      board[y][x] = word[wordIndex];
+      placedCells.push({ x, y });
+    }
   }
 
-  return nextBoard;
+  return placedCells;
+}
+
+/**
+ * Clears only the cells filled by the most recent word placement.
+ *
+ * @param {(string | null)[][]} board The shared search board.
+ * @param {{x: number, y: number}[]} placedCells The cells to restore.
+ * @returns {void}
+ */
+function undoWordPlacement(board, placedCells) {
+  for (const { x, y } of placedCells) {
+    board[y][x] = null;
+  }
 }
 
 /**
@@ -269,13 +285,13 @@ function solve(slots, words, board) {
   const solutions = [];
 
   // Try every unused compatible word in the next unfilled slot.
-  function search(remainingSlots, remainingWords, currentBoard) {
+  function search(remainingSlots, remainingWords) {
     if (solutions.length > 1) {
       return;
     }
 
     if (remainingSlots.length === 0) {
-      solutions.push(currentBoard);
+      solutions.push(board.map((row) => [...row]));
       return;
     }
 
@@ -284,19 +300,20 @@ function solve(slots, words, board) {
     for (let wordIndex = 0; wordIndex < remainingWords.length; wordIndex++) {
       const word = remainingWords[wordIndex];
 
-      if (!canPlaceWord(slot, word, currentBoard)) {
+      if (!canPlaceWord(slot, word, board)) {
         continue;
       }
 
       const nextWords = remainingWords.filter(
         (_, index) => index !== wordIndex,
       );
-      const nextBoard = placeWord(slot, word, currentBoard);
-      search(nextSlots, nextWords, nextBoard);
+      const placedCells = placeWord(slot, word, board);
+      search(nextSlots, nextWords);
+      undoWordPlacement(board, placedCells);
     }
   }
 
-  search(slots, words, board);
+  search(slots, words);
   switch (solutions.length) {
     case 2:
       return { error: "puzzle has more than 1 solution" };
@@ -349,6 +366,7 @@ module.exports = {
   createBoard,
   canPlaceWord,
   placeWord,
+  undoWordPlacement,
   solve,
   crosswordSolver,
 };
