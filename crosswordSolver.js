@@ -274,6 +274,33 @@ function undoWordPlacement(board, placedCells) {
 }
 
 /**
+ * Finds the first slot whose length has the fewest remaining words.
+ *
+ * @param {Slot[]} slots The remaining unfilled slots.
+ * @param {number[]} remainingWordCountsByLength Available words by length.
+ * @returns {number} The index of the rarest-length slot.
+ */
+function findRarestLengthSlotIndex(slots, remainingWordCountsByLength) {
+  let rarestSlotIndex = 0;
+  let fewestRemainingWords = Infinity;
+
+  for (let slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+    const slotLength = slots[slotIndex].length;
+    const wordCount = remainingWordCountsByLength[slotLength] ?? 0;
+    if (wordCount < fewestRemainingWords) {
+      rarestSlotIndex = slotIndex;
+      fewestRemainingWords = wordCount;
+    }
+
+    if (fewestRemainingWords === 0) {
+      break;
+    }
+  }
+
+  return rarestSlotIndex;
+}
+
+/**
  * Finds the only valid filling for every slot, if one exists.
  *
  * @param {Slot[]} slots The unchanging word positions.
@@ -283,8 +310,14 @@ function undoWordPlacement(board, placedCells) {
  */
 function solve(slots, words, board) {
   const solutions = [];
+  const remainingWordCountsByLength = [];
 
-  // Try every unused compatible word in the next unfilled slot.
+  for (const word of words) {
+    remainingWordCountsByLength[word.length] =
+      (remainingWordCountsByLength[word.length] ?? 0) + 1;
+  }
+
+  // Try every unused compatible word in the rarest-length unfilled slot.
   function search(remainingSlots, remainingWords) {
     if (solutions.length > 1) {
       return;
@@ -295,7 +328,12 @@ function solve(slots, words, board) {
       return;
     }
 
-    const [slot, ...nextSlots] = remainingSlots;
+    const slotIndex = findRarestLengthSlotIndex(
+      remainingSlots,
+      remainingWordCountsByLength,
+    );
+    const slot = remainingSlots[slotIndex];
+    const nextSlots = remainingSlots.filter((_, index) => index !== slotIndex);
 
     for (let wordIndex = 0; wordIndex < remainingWords.length; wordIndex++) {
       const word = remainingWords[wordIndex];
@@ -308,7 +346,9 @@ function solve(slots, words, board) {
         (_, index) => index !== wordIndex,
       );
       const placedCells = placeWord(slot, word, board);
+      remainingWordCountsByLength[word.length]--;
       search(nextSlots, nextWords);
+      remainingWordCountsByLength[word.length]++;
       undoWordPlacement(board, placedCells);
     }
   }
@@ -367,6 +407,7 @@ module.exports = {
   canPlaceWord,
   placeWord,
   undoWordPlacement,
+  findRarestLengthSlotIndex,
   solve,
   crosswordSolver,
 };

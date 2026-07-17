@@ -10,6 +10,7 @@ const {
   canPlaceWord,
   placeWord,
   undoWordPlacement,
+  findRarestLengthSlotIndex,
   solve,
   crosswordSolver,
 } = require("../crosswordSolver");
@@ -252,6 +253,24 @@ test("placeWord records mutable placements for across and down slots", () => {
     ["a", "."],
     [null, "."],
   ]);
+});
+
+test("findRarestLengthSlotIndex chooses the first rarest length", () => {
+  const slots = [
+    { x: 0, y: 0, direction: "across", length: 4 },
+    { x: 0, y: 1, direction: "across", length: 3 },
+    { x: 0, y: 2, direction: "across", length: 5 },
+    { x: 0, y: 3, direction: "across", length: 3 },
+  ];
+  const wordCountsByLength = [];
+  wordCountsByLength[3] = 2;
+  wordCountsByLength[4] = 3;
+  wordCountsByLength[5] = 1;
+
+  assert.equal(findRarestLengthSlotIndex(slots, wordCountsByLength), 2);
+
+  wordCountsByLength[3] = 1;
+  assert.equal(findRarestLengthSlotIndex(slots, wordCountsByLength), 1);
 });
 
 test("solve returns the unique board or a detailed error", () => {
