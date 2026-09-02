@@ -1,0 +1,13 @@
+{
+  "name": "crossword-solver",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backtracking crossword solver with strict validation and uniqueness detection.",
+  "scripts": {
+    "test": "node --test test/crosswordSolver.test.js",
+    "benchmark": "node timer.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
